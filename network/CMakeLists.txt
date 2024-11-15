@@ -55,6 +55,16 @@ target_include_directories(${CLIENT_PROJECT_NAME} PUBLIC
     "${PROJECT_BINARY_DIR}"
 )
 
+# Node program
+set(NODE_PROJECT_NAME node)
+add_executable(${NODE_PROJECT_NAME} node.cc)
+
+target_link_libraries(${NODE_PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
+
+target_include_directories(${NODE_PROJECT_NAME} PUBLIC
+    "${PROJECT_BINARY_DIR}"
+)
+
 # Benchmark program
 #set(BENCHMARK_PROJECT_NAME benchmark)
 #add_executable(${BENCHMARK_PROJECT_NAME} benchmark.cc)

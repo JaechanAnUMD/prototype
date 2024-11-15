@@ -1,0 +1,3 @@
+[submodule "network/network/include/merkle"]
+	path = network/network/include/merkle
+	url = https://github.com/microsoft/merklecpp.git
