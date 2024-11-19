@@ -6,23 +6,26 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "network.h"
+#include "merkle/merklecpp.h"
+#include "merkle_tree.h"
+
 #define PORT 11000
 
-struct NodeInfo {
-    std::string ip;
-    int port;
-};
+void InitRoutingTable(MerkleTree& tree) {
+    // Insert some key-value pairs
+    tree.insert("{20.121.137.95,172.210.11.93}", {"48.217.241.39", "172.210.11.93"});
+    tree.insert("{20.121.137.95,48.217.241.39}", {"172.210.11.93", "48.217.241.39"});
 
-// Sample path through nodes (an acyclic path based on the graph)
-std::vector<NodeInfo> getPath() {
-    return {
-        {"127.0.0.1", 11001},
-            {"172.210.11.93", 22},
-            {"48.217.241.39", 22},
-    };
+    // Print the root hash
+    std::cout << "Root Hash: " << tree.getRootHash() << std::endl;
+
+    // Get a value
+    auto value = tree.get("{20.121.137.95,172.210.11.93}");
+    std::cout << "Value: " << value[0] << ", " << value[1] << std::endl;
 }
 
-int queryNode(const NodeInfo& node, int data) {
+int queryNode(const std::string& ip, const int port, int data) {
     int sock = 0;
     struct sockaddr_in serv_addr;
     int result;
@@ -33,10 +36,10 @@ int queryNode(const NodeInfo& node, int data) {
     }
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(node.port);
+    serv_addr.sin_port = htons(port);
 
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, node.ip.c_str(), &serv_addr.sin_addr) <= 0) {
+    // Convernodet IPv4 and IPv6 addresses from text to binary form
+    if (inet_pton(AF_INET, ip.c_str(), &serv_addr.sin_addr) <= 0) {
         std::cerr << "Invalid address/ Address not supported" << std::endl;
         return -1;
     }
@@ -56,7 +59,20 @@ int queryNode(const NodeInfo& node, int data) {
 }
 
 
-int main() {
+int main(int argc, char* argv[]) {
+#if 0
+    merkle::Tree::Hash hash("fa8f44eabb728d4020e7f33d1aa973faaef19de6c06679bccdc5100a3c01f54a");
+
+    merkle::Tree tree;
+    tree.insert(hash);
+    auto root = tree.root();
+    auto path = tree.path(0);
+    assert(path->verify(root));
+#endif
+    MerkleTree routing_table;
+
+    InitRoutingTable(routing_table);
+
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
@@ -106,13 +122,15 @@ int main() {
             break;
         }
 
-        std::vector<NodeInfo> path = getPath();
+        // Fetch the ips for the nodes in the routing path
+        auto ips = routing_table.get("{20.121.137.95,172.210.11.93}");
+        std::cout << "Value: " << ips[0] << ", " << ips[1] << std::endl;
 
         // Logic for computing final result
         int accumulatedResult = 0;
-        for (const auto& node : path) {
-            std::cout << "Retrieving data from " << node.ip << ":" << node.port << std::endl;
-            accumulatedResult += queryNode(node, accumulatedResult);
+        for (const auto& ip : ips) {
+            std::cout << "Retrieving data from " << ip << ":" << PORT << std::endl;
+            accumulatedResult += queryNode(ip, PORT, accumulatedResult);
         }
 
         std::cout << "Final result from path traversal: " << accumulatedResult << std::endl;

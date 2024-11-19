@@ -4,6 +4,12 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include "int_merkle_tree.h"
+
+void InitRoutingTable(IntMerkleTree& tree) {
+    tree.insert("{20.121.137.95,172.210.11.93}", 40);
+    tree.insert("{20.121.137.95,48.217.241.39}", 100);
+}
 
 int performCalculation(int data) {
     return data + 1; // Example calculation (customize as needed)
@@ -12,9 +18,13 @@ int performCalculation(int data) {
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         std::cout << "Usage: {port}" << std::endl;
-        std::cout << "Example: ./node 11001" << std::endl;
+        std::cout << "Example: ./node 11000" << std::endl;
         return -1;
     }
+
+    IntMerkleTree routing_table;
+
+    InitRoutingTable(routing_table);
 
     int port = atoi(argv[1]);
     int node_fd, new_socket;
@@ -42,6 +52,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Bind failed" << std::endl;
         return -1;
     }
+
     if (listen(node_fd, 3) < 0) {
         std::cerr << "Listen failed" << std::endl;
         return -1;
