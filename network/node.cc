@@ -9,6 +9,13 @@
 void InitRoutingTable(IntMerkleTree& tree) {
     tree.insert("{20.121.137.95,172.210.11.93}", 40);
     tree.insert("{20.121.137.95,48.217.241.39}", 100);
+
+    // Print the root hash
+    std::cout << "Root Hash: " << tree.getRootHash() << std::endl;
+
+    // Get a value
+    auto value = tree.get("{20.121.137.95,172.210.11.93}");
+    std::cout << "Value: " << value << std::endl;
 }
 
 int performCalculation(int data) {
