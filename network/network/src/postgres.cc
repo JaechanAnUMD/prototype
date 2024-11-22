@@ -10,7 +10,7 @@ Postgres::Postgres() {}
 Postgres::~Postgres() {}
 
 void Postgres::Open() {
-    const char* conninfo = "dbname=vns user=postgres hostaddr=127.0.0.1 port=5432";
+    const char* conninfo = "dbname=vns user=jaechan password=1234 hostaddr=127.0.0.1 port=5432";
 
     PGconn* conn = PQconnectdb(conninfo);
 

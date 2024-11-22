@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 
     postgres.Open();
 
-    const char* query = "SELECT * FROM iptable;";
+    const char* query = "SELECT * FROM node_ips;";
     PGresult* res = postgres.Exec(query);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -31,7 +31,22 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::cout << "PostgreSQL Version: " << PQgetvalue(res, 0, 0) << std::endl;
+    // Fetch and display rows
+    int rows = PQntuples(res);
+    int cols = PQnfields(res);
+
+    std::cout << "Retrieved rows: " << rows << std::endl;
+
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            std::cout << PQgetvalue(res, i, j) << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    // TODO: connect to server
+
+    // std::cout << "PostgreSQL Version: " << PQgetvalue(res, 0, 0) << std::endl;
 
     PQclear(res);
 
