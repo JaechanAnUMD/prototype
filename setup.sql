@@ -17,6 +17,10 @@ WHERE NOT EXISTS (
 -- Connect to the database
 \c vns
 
+DROP TABLE node_ips;
+DROP TABLE node_connections;
+DROP TABLE routes;
+
 -- Grant all privileges on the "public" schema to the user
 GRANT ALL ON SCHEMA public TO jaechan;
 
@@ -33,18 +37,37 @@ CREATE TABLE IF NOT EXISTS node_connections (
     PRIMARY KEY (from_node_id, to_node_id)
 );
 
-CREATE TABLE IF NOT EXISTS routing_table (
+CREATE TABLE IF NOT EXISTS routes (
     src_ip VARCHAR(15) NOT NULL,  -- Source IP
     dst_ip VARCHAR(15) NOT NULL,  -- Destination IP
-    routing_ip VARCHAR(15) NOT NULL,  -- Routing IP (1 of N mapping)
+    node_ip VARCHAR(15) NOT NULL,  -- Routing IP (1 of N mapping)
 
-    PRIMARY KEY (src_ip, dst_ip, routing_ip)  -- Composite primary key to allow multiple routing_ip for each src_ip, dst_ip
+    PRIMARY KEY (src_ip, dst_ip, node_ip)
+);
+
+CREATE TABLE IF NOT EXISTS logs (
+    src_ip VARCHAR(15) NOT NULL,
+    dst_ip VARCHAR(15) NOT NULL,
+    data INT NOT NULL,
+
+    PRIMARY KEY (src_ip, dst_ip, node_ip)
+);
+
+CREATE TABLE IF NOT EXISTS all_logs (
+    src_ip VARCHAR(15) NOT NULL,
+    dst_ip VARCHAR(15) NOT NULL,
+    node_ip VARCHAR(15) NOT NULL,
+    data INT NOT NULL,
+
+    PRIMARY KEY (src_ip, dst_ip, node_ip)
 );
 
 -- Change the owner of the tables to "jaechan"
 ALTER TABLE node_ips OWNER TO jaechan;
 ALTER TABLE node_connections OWNER TO jaechan;
-ALTER TABLE routing_table OWNER TO jaechan;
+ALTER TABLE routes OWNER TO jaechan;
+ALTER TABLE logs OWNER TO jaechan;
+ALTER TABLE all_logs OWNER TO jaechan;
 
 -- Insert initial data into "node_ips"
 INSERT INTO node_ips (node_id, ip, port) VALUES
@@ -71,12 +94,18 @@ INSERT INTO node_connections (from_node_id, to_node_id) VALUES
     (3, 2)  -- Node 3 connected to Node 2
 ON CONFLICT DO NOTHING;
 
-INSERT INTO routing_table (src_ip, dst_ip, routing_ip) VALUES
+INSERT INTO routes (src_ip, dst_ip, node_ip) VALUES
     ('1.1.1.1', '9.9.9.9', '172.210.11.93'), -- node 1
     ('1.1.1.1', '9.9.9.9', '48.217.241.39'), -- node 2
     ('1.1.1.1', '8.8.8.8', '172.210.11.93')  -- node 1
 ON CONFLICT DO NOTHING;
 
+INSERT INTO all_logs (src_ip, dst_ip, node_ip, data) VALUES
+    ('1.1.1.1', '9.9.9.9', '172.210.11.93', 1),
+    ('1.1.1.1', '9.9.9.9', '48.217.241.39', 2),
+    ('1.1.1.1', '8.8.8.8', '172.210.11.93', 1)
+ON CONFLICT DO NOTHING;
+
 -- SELECT * FROM node_ips;
 -- SELECT * FROM node_connections;
-SELECT * FROM routing_table;
+SELECT * FROM routes;

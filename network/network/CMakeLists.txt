@@ -5,6 +5,7 @@ set(NETWORK_SOURCES
     ${NETWORK_SOURCE_DIR}/global.cc
     ${NETWORK_SOURCE_DIR}/socket.cc
     ${NETWORK_SOURCE_DIR}/postgres.cc
+    ${NETWORK_SOURCE_DIR}/merkle_tree.cc
 )
 
 # Headers
@@ -13,10 +14,11 @@ set(NETWORK_HEADERS
     ${NETWORK_HEADER_DIR}/network.h
     ${NETWORK_HEADER_DIR}/util.h
     ${NETWORK_HEADER_DIR}/socket.h
-    ${NETWORK_HEADER_DIR}/merkle_tree.h
     ${NETWORK_HEADER_DIR}/postgres.h
     ${NETWORK_HEADER_DIR}/node_ip.h
     ${NETWORK_HEADER_DIR}/node_conn.h
+    ${NETWORK_HEADER_DIR}/route.h
+    ${NETWORK_HEADER_DIR}/merkle_tree.h
 )
 
 add_library(network STATIC ${NETWORK_HEADERS} ${NETWORK_SOURCES})

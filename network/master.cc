@@ -1,13 +1,19 @@
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <cstring>
 #include <iostream>
 #include <sstream>
 #include <thread>
 #include <vector>
 
+#include "merkle_tree.h"
 #include "network.h"
 #include "node_conn.h"
 #include "node_ip.h"
 #include "postgres.h"
+#include "route.h"
 #include "socket.h"
 #include "util.h"
 
@@ -18,19 +24,19 @@ void clientThread(VNS::Socket& socket);
 void handleClient(int sock);
 
 int main(int argc, char* argv[]) {
-    if (argc > 1) {
-        std::cout << "Usage: ./master" << std::endl;
+    if (argc < 2) {
+        std::cout << "Usage: ./master {port}" << std::endl;
         return -1;
     }
 
     /**
-     * Read from Postgre to setup the nodes.
+     * Read from Postgres to setup the routing table.
      */
     VNS::Postgres postgres;
 
     postgres.Open();
 
-    const char* query = "SELECT * FROM node_ips;";
+    const char* query = "SELECT * FROM routes;";
     PGresult* res = postgres.Exec(query);
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK) {
@@ -40,21 +46,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Fetch rows and populate the vector
-    std::vector<VNS::NodeIp> node_ips;
+    std::vector<VNS::Route> routes;
+
     int rows = PQntuples(res);
-
     for (int i = 0; i < rows; ++i) {
-        int node_id = std::stoi(PQgetvalue(res, i, PQfnumber(res, "node_id")));
-        std::string ip = PQgetvalue(res, i, PQfnumber(res, "ip"));
-        int port = std::stoi(PQgetvalue(res, i, PQfnumber(res, "port")));
-
-        node_ips.emplace_back(node_id, ip, port);  // Add to the vector
-    }
-
-    // Display the loaded data
-    for (const auto& node_ip : node_ips) {
-        node_ip.display();
+        std::string src_ip = PQgetvalue(res, i, PQfnumber(res, "src_ip"));
+        std::string dst_ip = PQgetvalue(res, i, PQfnumber(res, "dst_ip"));
+        std::string node_ip = PQgetvalue(res, i, PQfnumber(res, "node_ip"));
+        routes.emplace_back(src_ip, dst_ip, node_ip);
     }
 
     PQclear(res);
@@ -62,9 +61,51 @@ int main(int argc, char* argv[]) {
     postgres.Close();
 
     /**
+     * Create Merkle tree in a shared memory location
+     */
+    // Create shared memory
+    int shm_fd = shm_open("/merkle_tree_shm", O_CREAT | O_RDWR, 0666);
+    if (shm_fd == -1) {
+        perror("shm_open");
+        return 1;
+    }
+
+    // Resize shared memory
+    if (ftruncate(shm_fd, sizeof(VNS::SharedMerkleTree)) == -1) {
+        perror("ftruncate");
+        return 1;
+    }
+
+    // Map shared memory
+    void* shm_ptr = mmap(0, sizeof(VNS::SharedMerkleTree), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    if (shm_ptr == MAP_FAILED) {
+        perror("mmap");
+        return 1;
+    }
+
+    auto* tree = static_cast<VNS::SharedMerkleTree*>(shm_ptr);
+    memset(tree, 0, sizeof(VNS::SharedMerkleTree));
+
+    // Create a Merkle tree of the routing table
+    for (const auto& route : routes) {
+        std::string value;
+        size_t ip_count = 0;
+
+        bool found = merkle_lookup(tree, route.src_ip, route.dst_ip, value, ip_count);
+
+        std::string new_value = value;
+        if (found) {
+            new_value = new_value + ";" + route.node_ip;
+        } else {
+            new_value = route.node_ip;
+        }
+        merkle_insert_or_update(tree, route.src_ip, route.dst_ip, new_value);
+    }
+
+    /**
      * Setup sockets
      */
-    int port = node_ips[0].port;  // Master node's index is always 0
+    int port = atoi(argv[1]);
 
     VNS::Socket socket;  // Socket for receiving data from clients
 
@@ -116,6 +157,10 @@ int main(int argc, char* argv[]) {
         }
     }
 #endif
+
+    // Cleanup
+    munmap(shm_ptr, sizeof(SharedMerkleTree));
+    shm_unlink("/merkle_tree_shm");
 
     return 0;
 }
