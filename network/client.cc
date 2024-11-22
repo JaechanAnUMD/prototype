@@ -1,60 +1,61 @@
-#include <iostream>
-#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
 #include <unistd.h>
-#include <cstdlib>
 
-#define PORT 11000
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+#include <sstream>
+#include <thread>
+
+#include "socket.h"
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cout << "Usage: {source} {destination} {query_type}" << std::endl
-            << "Query Type:" << std::endl
-            << "1. tmp" << std::endl
-            << "2. RTT" << std::endl
-            << "3. Packet Loss Rate" << std::endl;
-        std::cout << "Example: ./client 1 5 1" << std::endl;
+    if (argc < 6) {
+        std::cout << "Usage: {master_ip} {master_port} {src_ip} {dst_ip} {data}" << std::endl;
+        std::cout << "Example: ./client 20.121.137.95 11000 1" << std::endl;
         return -1;
     }
 
-    int src = atoi(argv[1]);
-    int dst = atoi(argv[2]);
-    int query_type = atoi(argv[3]);
+    std::string master_ip(argv[1]);
+    int master_port = atoi(argv[2]);
+    std::string src_ip(argv[3]);
+    std::string dst_ip(argv[4]);
+    int data = atoi(argv[5]);
 
-    int sock = 0;
-    struct sockaddr_in serv_addr;
+    VNS::Socket sock;
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        std::cerr << "Socket creation error" << std::endl;
+    int master_sock = sock.Connect(master_ip, master_port);
+    if (master_sock == -1) {
+        std::cout << "Master connection failure" << std::endl;
         return -1;
     }
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    data = 5;  // TODO: delete, for testing
+    while (true) {
+        std::stringstream ss;
+        ss << master_ip << " " << master_port << " " << src_ip << " " << dst_ip << " " << data;
 
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-        std::cerr << "Invalid address/ Address not supported" << std::endl;
-        return -1;
+        std::string message = ss.str();
+        std::cout << "Sending: " << message << std::endl;
+
+        sock.Send(message);
+
+        data--;  // TODO: delete, for testing
+        if (data < -1) break;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        std::cerr << "Connection Failed" << std::endl;
-        return -1;
-    }
+    sock.Close();
 
-    int numbers[] = {src, dst, query_type};
-    std::cout << "Source: " << src
-        << " Destination: " << dst
-        << " Query type: " << query_type << std::endl;
+    // send(sock, numbers, sizeof(numbers), 0);
 
-    send(sock, numbers, sizeof(numbers), 0);
+    // int result;
+    // read(sock, &result, sizeof(result));
 
-    int result;
-    read(sock, &result, sizeof(result));
+    // std::cout << "Received result from server: " << result << std::endl;
 
-    std::cout << "Received result from server: " << result << std::endl;
-
-    close(sock);
+    // close(sock);
     return 0;
 }

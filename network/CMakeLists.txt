@@ -35,13 +35,13 @@ if(USE_GOOGLE_TEST)
     add_subdirectory(test)
 endif()
 
-# Server program
-set(SERVER_PROJECT_NAME server)
-add_executable(${SERVER_PROJECT_NAME} server.cc)
+# Master program
+set(MASTER_PROJECT_NAME master)
+add_executable(${MASTER_PROJECT_NAME} master.cc)
 
-target_link_libraries(${SERVER_PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
+target_link_libraries(${MASTER_PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
 
-target_include_directories(${SERVER_PROJECT_NAME} PUBLIC
+target_include_directories(${MASTER_PROJECT_NAME} PUBLIC
     "${PROJECT_BINARY_DIR}"
 )
 

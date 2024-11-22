@@ -1,16 +1,8 @@
-#ifndef MOCKDATA_H
-#define MOCKDATA_H
+#ifndef NETWORK_H
+#define NETWORK_H
 
-#include <vector>
+namespace VNS {
+// extern BiDirectionalMap node_meta;
+}  // namespace VNS
 
-class MockData {
-    public:
-        int key;
-        int value;
-
-        MockData(int k, int v): key(k), value(v){}
-};
-
-extern std::vector<MockData> DATA;
-
-#endif // MOCKDATA_H
+#endif  // NETWORK_H

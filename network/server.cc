@@ -1,14 +1,15 @@
-#include <iostream>
-#include <cstring>
-#include <vector>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
-#include "network.h"
+#include <cstring>
+#include <iostream>
+#include <vector>
+
 #include "merkle/merklecpp.h"
 #include "merkle_tree.h"
+#include "network.h"
 
 #define PORT 11000
 
@@ -44,7 +45,7 @@ int queryNode(const std::string& ip, const int port, int data) {
         return -1;
     }
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         std::cerr << "Connection Failed" << std::endl;
         return -1;
     }
@@ -57,7 +58,6 @@ int queryNode(const std::string& ip, const int port, int data) {
 
     return result;
 }
-
 
 int main(int argc, char* argv[]) {
 #if 0
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     address.sin_port = htons(PORT);
 
     // Bind the socket to the network address and port
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         std::cerr << "Bind failed" << std::endl;
         return -1;
     }
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Server is listening on port " << PORT << std::endl;
 
     while (true) {
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+        if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
             std::cerr << "Accept failed" << std::endl;
             continue;
         }
@@ -136,7 +136,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Final result from path traversal: " << accumulatedResult << std::endl;
         // Perform operation (e.g., sum of the integers)
         // int result = numbers[0] + numbers[1];
-        // std::cout << "Received numbers: " << numbers[0] << " and " << numbers[1] << ". Sending result: " << result << std::endl;
+        // std::cout << "Received numbers: " << numbers[0] << " and " << numbers[1] << ". Sending result: " << result <<
+        // std::endl;
 
         // Send the result back to the client
         send(new_socket, &accumulatedResult, sizeof(accumulatedResult), 0);
