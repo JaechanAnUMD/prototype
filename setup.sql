@@ -53,6 +53,9 @@ WHERE node_id != 0
 ON CONFLICT DO NOTHING;
 
 INSERT INTO node_connections (from_node_id, to_node_id) VALUES
+    (1, 0), -- Node 1 connected to Master node
+    (2, 0), -- Node 2 connected to Master node
+    (3, 0), -- Node 3 connected to Master node
     (1, 3), -- Node 1 connected to Node 3
     (3, 1), -- Node 3 connected to Node 1
     (2, 3), -- Node 2 connected to Node 3

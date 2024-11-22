@@ -5,22 +5,68 @@
 #include <vector>
 
 #include "network.h"
+#include "node_conn.h"
+#include "node_ip.h"
+#include "postgres.h"
 #include "socket.h"
 #include "util.h"
 
 #define BUFFER_SIZE 1024
 
+void nodeThread(VNS::Socket& socket);
+void clientThread(VNS::Socket& socket);
 void handleClient(int sock);
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: ./master {port}" << std::endl;
+    if (argc > 1) {
+        std::cout << "Usage: ./master" << std::endl;
         return -1;
     }
 
-    int port = atoi(argv[1]);
+    /**
+     * Read from Postgre to setup the nodes.
+     */
+    VNS::Postgres postgres;
 
-    VNS::Socket socket;
+    postgres.Open();
+
+    const char* query = "SELECT * FROM node_ips;";
+    PGresult* res = postgres.Exec(query);
+
+    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+        std::cerr << "Query failed: " << PQerrorMessage(postgres.conn()) << std::endl;
+        PQclear(res);
+        PQfinish(postgres.conn());
+        return 1;
+    }
+
+    // Fetch rows and populate the vector
+    std::vector<VNS::NodeIp> node_ips;
+    int rows = PQntuples(res);
+
+    for (int i = 0; i < rows; ++i) {
+        int node_id = std::stoi(PQgetvalue(res, i, PQfnumber(res, "node_id")));
+        std::string ip = PQgetvalue(res, i, PQfnumber(res, "ip"));
+        int port = std::stoi(PQgetvalue(res, i, PQfnumber(res, "port")));
+
+        node_ips.emplace_back(node_id, ip, port);  // Add to the vector
+    }
+
+    // Display the loaded data
+    for (const auto& node_ip : node_ips) {
+        node_ip.display();
+    }
+
+    PQclear(res);
+
+    postgres.Close();
+
+    /**
+     * Setup sockets
+     */
+    int port = node_ips[0].port;  // Master node's index is always 0
+
+    VNS::Socket socket;  // Socket for receiving data from clients
 
     int result = socket.Open(port);
     if (result == -1) {
@@ -28,8 +74,55 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    VNS::BiDirectionalMap node_ips;
+    std::vector<std::thread> threads;
 
+    // Handle connections to nodes
+    // threads.emplace_back(nodeThread, std::ref(sock));
+
+    // Accept clients
+    // TODO: this can be done only after the nodes are fully connected.
+    // i.e., clients need to wait until the system is ready.
+    threads.emplace_back(clientThread, std::ref(socket));
+
+    while (true) {
+        // TODO: run condition
+    }
+
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+
+#if 0
+    std::vector<std::thread> threads;
+    while (true) {
+        int client_sock = socket.Accept();
+
+        if (client_sock == -1) {
+            std::cout << "Accept failed" << std::endl;
+            continue;
+        }
+
+        std::cout << "New client connected" << std::endl;
+
+        // Create a thread to handle the client
+        threads.emplace_back(handleClient, client_sock);
+    }
+
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
+        }
+    }
+#endif
+
+    return 0;
+}
+
+void nodeThread(VNS::Socket& socket) {}
+
+void clientThread(VNS::Socket& socket) {
     std::vector<std::thread> threads;
     while (true) {
         int client_sock = socket.Accept();
@@ -52,8 +145,6 @@ int main(int argc, char* argv[]) {
     }
 
     socket.Close();
-
-    return 0;
 }
 
 void handleClient(int sock) {
